@@ -57,6 +57,7 @@ jobs:
             libxrender-dev \
             libxcomposite-dev \
             libxdamage-dev \
+            libxxf86vm-dev \
             libxss1 \
             libgdk-pixbuf2.0-dev \
             libpango1.0-dev \
