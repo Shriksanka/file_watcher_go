@@ -348,9 +348,9 @@ func main() {
 	logContainer.SetMinSize(fyne.NewSize(580, 350))
 	logAreaContainer := container.NewMax(logAreaBg, logContainer)
 
-	// Canvas.Text для отображения выбранной папки с черным цветом
-	blackColor := color.RGBA{R: 0, G: 0, B: 0, A: 255}
-	folderText := canvas.NewText("Папка: "+selectedFolder, blackColor)
+	// Canvas.Text для отображения выбранной папки с белым цветом (чтобы было видно на сером фоне)
+	whiteColor := color.RGBA{R: 0xE0, G: 0xE3, B: 0xE7, A: 255}
+	folderText := canvas.NewText("Папка: "+selectedFolder, whiteColor)
 	folderText.TextStyle = fyne.TextStyle{}
 	folderText.Alignment = fyne.TextAlignLeading
 	
@@ -517,8 +517,18 @@ func (t *customTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant)
 		return color.RGBA{R: 0x2F, G: 0x3D, B: 0x4E, A: 255}
 	case theme.ColorNamePlaceHolder:
 		return color.RGBA{R: 0xE0, G: 0xE3, B: 0xE7, A: 200}
+	case theme.ColorNameOverlayBackground:
+		// Темный фон для диалогов (почти черный)
+		return color.RGBA{R: 0x0A, G: 0x0A, B: 0x0A, A: 255}
+	case theme.ColorNameMenuBackground:
+		// Темный фон для меню в диалогах
+		return color.RGBA{R: 0x1A, G: 0x1A, B: 0x1A, A: 255}
+	case theme.ColorNameSelection:
+		// Цвет выделения в диалогах
+		return color.RGBA{R: 0x2F, G: 0x3D, B: 0x4E, A: 255}
 	default:
-		return theme.LightTheme().Color(name, variant)
+		// Для остальных цветов используем темную тему вместо светлой
+		return theme.DarkTheme().Color(name, variant)
 	}
 }
 
