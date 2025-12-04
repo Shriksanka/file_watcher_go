@@ -23,6 +23,16 @@ jobs:
             goarch: amd64
             artifact_name: file-upload-monitor-windows
             extension: .exe
+          - os: macos-latest
+            goos: darwin
+            goarch: amd64
+            artifact_name: file-upload-monitor-macos
+            extension: ""
+          - os: macos-latest
+            goos: darwin
+            goarch: arm64
+            artifact_name: file-upload-monitor-macos-arm64
+            extension: ""
 
     steps:
       - name: Checkout code
@@ -84,6 +94,15 @@ jobs:
           CGO_ENABLED: 1
         run: |
           go build -ldflags="-s -w -H windowsgui" -o ${{ matrix.artifact_name }}${{ matrix.extension }} main.go
+
+      - name: Build (macOS)
+        if: matrix.goos == 'darwin'
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 1
+        run: |
+          go build -ldflags="-s -w" -o ${{ matrix.artifact_name }}${{ matrix.extension }} main.go
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

@@ -348,10 +348,17 @@ func main() {
 	logContainer.SetMinSize(fyne.NewSize(580, 350))
 	logAreaContainer := container.NewMax(logAreaBg, logContainer)
 
-	// Label для отображения выбранной папки
-	folderLabel := widget.NewLabel("Папка: " + selectedFolder)
-	folderLabel.Wrapping = fyne.TextWrapWord
-	folderLabel.Truncation = fyne.TextTruncateEllipsis
+	// Canvas.Text для отображения выбранной папки с черным цветом
+	blackColor := color.RGBA{R: 0, G: 0, B: 0, A: 255}
+	folderText := canvas.NewText("Папка: "+selectedFolder, blackColor)
+	folderText.TextStyle = fyne.TextStyle{}
+	folderText.Alignment = fyne.TextAlignLeading
+	
+	// Функция для обновления текста папки
+	updateFolderText := func(path string) {
+		folderText.Text = "Папка: " + path
+		folderText.Refresh()
+	}
 	
 	// Кнопка выбора папки
 	selectFolderBtn := widget.NewButton("Выбрать папку", nil)
@@ -369,16 +376,20 @@ func main() {
 			selectedFolder = uri.Path()
 			folderMu.Unlock()
 			
-			folderLabel.SetText("Папка: " + selectedFolder)
+			updateFolderText(selectedFolder)
 			logChan <- fmt.Sprintf("Выбрана папка: %s", selectedFolder)
 		}, myWindow)
 	}
 	
-	// Контейнер для выбора папки
+	// Контейнер для выбора папки с правильным layout
+	// Используем Border для размещения текста слева и кнопки справа
+	// Текст будет скроллироваться если путь длинный
+	folderTextWrapper := container.NewScroll(folderText)
+	folderTextWrapper.SetMinSize(fyne.NewSize(400, 30))
 	folderContainer := container.NewBorder(
 		nil,
 		nil,
-		folderLabel,
+		folderTextWrapper,
 		selectFolderBtn,
 		nil,
 	)
