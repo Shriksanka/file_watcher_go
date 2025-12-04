@@ -19,6 +19,7 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/fsnotify/fsnotify"
@@ -257,13 +258,12 @@ func handleFile(filePath string, logChan chan<- string, isActive func() bool) {
 	logChan <- fmt.Sprintf("Файл успешно отправлен: %s", fileName)
 }
 
-func watchDownloads(stopChan <-chan bool, logChan chan<- string, isActive func() bool) error {
-	downloadsPath, err := getDownloadsPath()
-	if err != nil {
-		return err
+func watchFolder(folderPath string, stopChan <-chan bool, logChan chan<- string, isActive func() bool) error {
+	if _, err := os.Stat(folderPath); os.IsNotExist(err) {
+		return fmt.Errorf("папка не найдена: %s", folderPath)
 	}
 
-	logChan <- fmt.Sprintf("Отслеживание папки: %s", downloadsPath)
+	logChan <- fmt.Sprintf("Отслеживание папки: %s", folderPath)
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -271,7 +271,7 @@ func watchDownloads(stopChan <-chan bool, logChan chan<- string, isActive func()
 	}
 	defer watcher.Close()
 
-	err = watcher.Add(downloadsPath)
+	err = watcher.Add(folderPath)
 	if err != nil {
 		return fmt.Errorf("не удалось добавить папку в watcher: %v", err)
 	}
@@ -314,12 +314,22 @@ func main() {
 	myApp.Settings().SetTheme(&customTheme{})
 	
 	myWindow := myApp.NewWindow("File Upload Monitor")
-	myWindow.Resize(fyne.NewSize(600, 500))
+	myWindow.Resize(fyne.NewSize(600, 550))
 	myWindow.CenterOnScreen()
 
 	var isProcessingActive bool
 	var processingMu sync.Mutex
 	var stopChan chan bool
+	var selectedFolder string
+	var folderMu sync.Mutex
+	
+	// Инициализация папки по умолчанию
+	defaultPath, err := getDownloadsPath()
+	if err == nil {
+		selectedFolder = defaultPath
+	} else {
+		selectedFolder = ""
+	}
 	
 	isActive := func() bool {
 		processingMu.Lock()
@@ -335,8 +345,43 @@ func main() {
 	logText.Validator = nil
 	logAreaBg := canvas.NewRectangle(color.RGBA{R: 0x27, G: 0x32, B: 0x41, A: 255})
 	logContainer := container.NewScroll(logText)
-	logContainer.SetMinSize(fyne.NewSize(580, 400))
+	logContainer.SetMinSize(fyne.NewSize(580, 350))
 	logAreaContainer := container.NewMax(logAreaBg, logContainer)
+
+	// Label для отображения выбранной папки
+	folderLabel := widget.NewLabel("Папка: " + selectedFolder)
+	folderLabel.Wrapping = fyne.TextWrapWord
+	folderLabel.Truncation = fyne.TextTruncateEllipsis
+	
+	// Кнопка выбора папки
+	selectFolderBtn := widget.NewButton("Выбрать папку", nil)
+	selectFolderBtn.OnTapped = func() {
+		dialog.ShowFolderOpen(func(uri fyne.ListableURI, err error) {
+			if err != nil {
+				logChan <- fmt.Sprintf("Ошибка выбора папки: %v", err)
+				return
+			}
+			if uri == nil {
+				return
+			}
+			
+			folderMu.Lock()
+			selectedFolder = uri.Path()
+			folderMu.Unlock()
+			
+			folderLabel.SetText("Папка: " + selectedFolder)
+			logChan <- fmt.Sprintf("Выбрана папка: %s", selectedFolder)
+		}, myWindow)
+	}
+	
+	// Контейнер для выбора папки
+	folderContainer := container.NewBorder(
+		nil,
+		nil,
+		folderLabel,
+		selectFolderBtn,
+		nil,
+	)
 
 	startStopBtn := widget.NewButton("START", nil)
 	startStopBtn.Importance = widget.HighImportance
@@ -360,6 +405,15 @@ func main() {
 			startStopBtn.Importance = widget.HighImportance
 			startStopBtn.Refresh()
 		} else {
+			folderMu.Lock()
+			currentFolder := selectedFolder
+			folderMu.Unlock()
+			
+			if currentFolder == "" {
+				logChan <- "Ошибка: не выбрана папка для отслеживания"
+				return
+			}
+			
 			processingMu.Lock()
 			isProcessingActive = true
 			processingMu.Unlock()
@@ -371,7 +425,7 @@ func main() {
 			startStopBtn.Refresh()
 			
 			go func() {
-				err := watchDownloads(stopChan, logChan, isActive)
+				err := watchFolder(currentFolder, stopChan, logChan, isActive)
 				if err != nil && err.Error() != "канал событий закрыт" {
 					logChan <- fmt.Sprintf("Ошибка: %v", err)
 				}
@@ -414,8 +468,14 @@ func main() {
 
 	mainBg := canvas.NewRectangle(color.RGBA{R: 0x1E, G: 0x25, B: 0x2E, A: 255})
 	
+	// Верхняя панель с выбором папки
+	topPanel := container.NewVBox(
+		folderContainer,
+		widget.NewSeparator(),
+	)
+	
 	content := container.NewBorder(
-		nil,
+		topPanel,
 		buttonContainer,
 		nil,
 		nil,
