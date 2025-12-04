@@ -527,8 +527,8 @@ func (t *customTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant)
 		// Цвет выделения в диалогах
 		return color.RGBA{R: 0x2F, G: 0x3D, B: 0x4E, A: 255}
 	default:
-		// Для остальных цветов используем темную тему вместо светлой
-		return theme.DarkTheme().Color(name, variant)
+		// Для остальных цветов (включая логи) используем светлую тему как было раньше
+		return theme.LightTheme().Color(name, variant)
 	}
 }
 
