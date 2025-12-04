@@ -2,9 +2,9 @@ name: Build
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master]
   pull_request:
-    branches: [ main, master ]
+    branches: [main, master]
   workflow_dispatch:
 
 jobs:
@@ -41,7 +41,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: "1.21"
 
       - name: Install dependencies (Linux)
         if: matrix.goos == 'linux'
@@ -102,12 +102,70 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: 1
         run: |
-          go build -ldflags="-s -w" -o ${{ matrix.artifact_name }}${{ matrix.extension }} main.go
+          mkdir -p FileUploadMonitor.app/Contents/MacOS
+          go build -ldflags="-s -w" -o FileUploadMonitor.app/Contents/MacOS/FileUploadMonitor main.go
+          cat > FileUploadMonitor.app/Contents/Info.plist << 'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+          	<key>CFBundleExecutable</key>
+          	<string>FileUploadMonitor</string>
+          	<key>CFBundleIdentifier</key>
+          	<string>com.fileuploadmonitor</string>
+          	<key>CFBundleName</key>
+          	<string>File Upload Monitor</string>
+          	<key>CFBundleVersion</key>
+          	<string>1.0</string>
+          	<key>CFBundlePackageType</key>
+          	<string>APPL</string>
+          	<key>LSMinimumSystemVersion</key>
+          	<string>10.13</string>
+          	<key>NSHighResolutionCapable</key>
+          	<true/>
+          	<key>LSUIElement</key>
+          	<false/>
+          </dict>
+          </plist>
+          EOF
 
-      - name: Upload artifact
+      - name: Create Linux desktop file
+        if: matrix.goos == 'linux'
+        run: |
+          cat > file-upload-monitor.desktop << 'EOF'
+          [Desktop Entry]
+          Version=1.0
+          Type=Application
+          Name=File Upload Monitor
+          Comment=Monitor and upload files from selected folder
+          Exec=./file-upload-monitor-linux
+          Icon=application-x-executable
+          Terminal=false
+          Categories=Utility;
+          EOF
+
+      - name: Upload artifact (Linux)
+        if: matrix.goos == 'linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: |
+            ${{ matrix.artifact_name }}${{ matrix.extension }}
+            file-upload-monitor.desktop
+          retention-days: 30
+
+      - name: Upload artifact (Windows)
+        if: matrix.goos == 'windows'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
           path: ${{ matrix.artifact_name }}${{ matrix.extension }}
           retention-days: 30
 
+      - name: Upload artifact (macOS)
+        if: matrix.goos == 'darwin'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: FileUploadMonitor.app
+          retention-days: 30
