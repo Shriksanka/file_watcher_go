@@ -162,10 +162,15 @@ jobs:
           path: ${{ matrix.artifact_name }}${{ matrix.extension }}
           retention-days: 30
 
+      - name: Create macOS archive
+        if: matrix.goos == 'darwin'
+        run: |
+          zip -r FileUploadMonitor.app.zip FileUploadMonitor.app
+
       - name: Upload artifact (macOS)
         if: matrix.goos == 'darwin'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
-          path: FileUploadMonitor.app
+          path: FileUploadMonitor.app.zip
           retention-days: 30
