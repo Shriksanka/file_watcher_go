@@ -132,7 +132,7 @@ file-upload-monitor.exe
 Файлы отправляются на:
 
 ```
-https://otlglcc10g.execute-api.ap-south-1.amazonaws.com/api/statements/upload
+api/statements/upload
 ```
 
 Формат запроса: `multipart/form-data` с полем `file`
