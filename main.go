@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	apiEndpoint = "https://otlglcc10g.execute-api.ap-south-1.amazonaws.com/api/statements/upload"
+	apiEndpoint = "api/statements/upload"
 	fileStabilityDelay = 2 * time.Second
 	checkInterval = 500 * time.Millisecond
 )
